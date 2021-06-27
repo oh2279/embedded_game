@@ -1,30 +1,31 @@
-from PIL import Image, ImageDraw, ImageFont
-import time
+from PIL import Image
+
 class bullet():
-    image = Image.open("/home/pi/beom/embedded_game/bullet.png")
+    image = Image.open("/home/pi/beom/embedded_game/img/bullet.png")
+    image2 = Image.open("/home/pi/beom/embedded_game/img/explosion.png")
+    
     def __init__(self,current_x,current_y):
         self.current_x = current_x
         self.current_y = current_y
         self.shots = []
+ 
     def fire(self,dragon_x,dragon_y):
         self.shots.append([dragon_x + 10,dragon_y])
-    
-    def auto_fire(self):
-        self.image.paste(self.image,(self.current_x,self.current_y))
-    def check(self):
-        trash =1
 
+    def check(self,monster):
+        if len(self.shots) > 0:
+            for i in range(len(self.shots))[::-1]:
+                flag = False
+                for j in range(len(monster))[::-1]:
+                    if flag:
+                        break
+                    for k in range(4):
+                        if self.shots[i][0] + 8 > monster[j][k] and monster[j][k] + 30 > self.shots[i][0] and self.shots[i][1] <= monster[j][4] +30 :
+                            self.shots.pop(i)
+                            monster[j][k] = -3000 #리스트 문제
+                            flag = True
+                            break
 
-# 히트박스(사각형), 총알의 왼쪽 위 좌표, 오른쪽 아래 좌표, 용의 왼쪽위 용의 오른쪽 아래 - 총 4개
+                   # 만약 총알이랑 적이랑 닿으면, 적 이미지 삭제, 총알 이미지 삭제, 보스 피 -1
 
-# x, y
-# sx, sy, ex, ey
-# sx <= x <= ex and sy <= y <= ey - 위 조건을 만족한다면 (x, y)라는 점이 (sx, sy, ex, ey)로 표현되는 사각형 내에 있는지 판단하는 코드
-
-# sx1, sy1, ex1, ey1
-# sx2, sy2, ex2, ey2
-
-#check(sx1, sy1, sx2, sy2, ex2, ey2) or check(sx1, ey1, sx2, sy2, ex2, ey2) or
-#check(ex1, sy1, sx2, sy2, ex2, ey2) or check(ex1, ey1, sx2, sy2, ex2, ey2)  # 총알이 용과 겹쳤는지 판단
-
-# 총알이 1, 용이 2
+ 
