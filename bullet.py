@@ -9,23 +9,20 @@ class bullet():
         self.current_y = current_y
         self.shots = []
  
-    def fire(self,dragon_x,dragon_y):
-        self.shots.append([dragon_x + 10,dragon_y])
+    def fire(self,filght_x,filght_y):
+        self.shots.append([filght_x + 10,filght_y]) # 내 캐릭터의 가운데에서 총알 발사
 
-    def check(self,monster):
+    def check_kill_enemy(self,enemy):   # bullet이 enemy와 닿았는지 검사
         if len(self.shots) > 0:
             for i in range(len(self.shots))[::-1]:
                 flag = False
-                for j in range(len(monster))[::-1]:
+                for j in range(len(enemy))[::-1]:
                     if flag:
                         break
                     for k in range(4):
-                        if self.shots[i][0] + 8 > monster[j][k] and monster[j][k] + 30 > self.shots[i][0] and self.shots[i][1] <= monster[j][4] +30 :
+                        if self.shots[i][0] + 8 > enemy[j][k] and enemy[j][k] + 30 > self.shots[i][0] and self.shots[i][1] <= enemy[j][4] +30 :
                             self.shots.pop(i)
-                            monster[j][k] = -3000 #리스트 문제
-                            flag = True
+            
+                            enemy[j][k] = -3000 #리스트 문제
+                            flag = True # 닿았다면 flag를 True로 만들고
                             break
-
-                   # 만약 총알이랑 적이랑 닿으면, 적 이미지 삭제, 총알 이미지 삭제, 보스 피 -1
-
- 
