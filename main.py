@@ -1,20 +1,14 @@
 import time
-import random
 from colorsys import hsv_to_rgb
 import board
 from digitalio import DigitalInOut, Direction
 from PIL import Image, ImageDraw, ImageFont
 import adafruit_rgb_display.st7789 as st7789
-from dragon import character
+from filght import character
 import stage
 from enemy import enemy
 from bullet import bullet
-
-def ending():
-    while True:
-        image.paste(stage.ending, (0,0))
-        disp.image(image)
-
+import sys
 
 # Create the display
 cs_pin = DigitalInOut(board.CE0)
@@ -80,111 +74,132 @@ draw = ImageDraw.Draw(image)
 # Draw a black filled box to clear the image.
 draw.rectangle((0, 0, width, height), outline=0, fill=0)
 
-current_x = 100
-current_y = 200
-dragon = character(current_x,current_y)
-monster = enemy()
-shot = bullet(dragon.current_x+10,dragon.current_y)
+#----------------------------------------------------------------
 
-enemy_count = 7 # 변수명 헷갈림,대문자(상수처럼 쓰는 것은 대문자)
-rezen_time = 4
-game_start = 0
+CURRENT_X = 100 # filght 시작 위치
+CURRENT_Y = 200 
 
-final = 0
+filght = character(CURRENT_X,CURRENT_Y)
+
+Enemy = enemy()
+
+Bullet = bullet(filght.current_x+10,filght.current_y)
+
+BOSS_COUNT = 10  # boss 출현전까지의 enemy 생성 횟수
+REZEN_TIME = 3  # enemy 재생성 시간
+GAME_START = 0  # game의 start 여부 판단
+
+def ending(tag):
+    if tag == 0:
+        image.paste(stage.ending, (0,0))
+        disp.image(image)
+        sys.exit()
+
+    elif tag == 1:
+        image.paste(stage.win, (0,0))
+        disp.image(image)
+        sys.exit()
 
 while True:
 
     if not button_U.value:  # up pressed - 버튼이 눌리면 false, true
-        dragon.move(0)
+        filght.move(0)
 
     if not button_D.value:  # down pressed
-        dragon.move(2)
+        filght.move(2)
 
     if not button_L.value:  # left pressed
-        dragon.move(3)
+        filght.move(3)
 
     if not button_R.value:  # right pressed
-        dragon.move(1)
+        filght.move(1)
 
     if not button_C.value:  # center pressed
         pass
 
     if not button_A.value:  # A pressed - 총알 발사 - 직선
-       shot.fire(dragon.current_x,dragon.current_y)
+       Bullet.fire(filght.current_x,filght.current_y)
 
-    if not button_B.value and game_start ==0:
-        game_start = 1
+    if not button_B.value and GAME_START ==0:   # b버튼을 눌렀는데 게임이 아직 시작안됐다면, 게임 시작
+        GAME_START = 1
         x = time.time()
         
-    if button_B.value and game_start == 0:  # B pressed 
+    if button_B.value and GAME_START == 0:  # b버튼을 안눌렀는데 게임이 시작 전이라면, 시작 보류
         image.paste(stage.start,(0,0))
         disp.image(image)
         continue
 
-    if not button_B.value and game_start ==1 :
-        dragon.more_speed = 5
-    elif game_start == 1 :
-        dragon.more_speed = 0
+    if not button_B.value and GAME_START ==1 :  # b버튼을 눌렀는데 게임이 진행중이라면, b버튼은 가속버튼
+        filght.more_speed = 5
+    elif GAME_START == 1 :  # b버튼 안누르고 있으면 가속 x
+        filght.more_speed = 0
+
 
     # Display the Image
     image.paste(stage.background, (0,0))
-    image.paste(dragon.image, (dragon.current_x,dragon.current_y))
-    for i in range(len(shot.shots)): # 총알 발사
-     
-        if shot.shots[i][1] < 0:
-            continue
-        if shot.shots[i][0] == 240 and shot.shots[i][1] ==0:
-            continue # ??
-        image.paste(shot.image, (shot.shots[i][0],shot.shots[i][1]))
-        shot.shots[i] = [shot.shots[i][0], shot.shots[i][1] - 6]
+    image.paste(filght.image, (filght.current_x,filght.current_y))
+
+    for i in range(len(Bullet.shots))[::-1]: # 총알 발사
+
+        if Bullet.shots[i][1] < 0:  # 화면 밖으로 나가면 paste x
+            Bullet.shots.pop(i)
+        else:
+            image.paste(Bullet.image, (Bullet.shots[i][0],Bullet.shots[i][1]))
+
+            Bullet.shots[i] = [Bullet.shots[i][0], Bullet.shots[i][1] - 9]
+
     
-    if abs((time.time()-x) >= rezen_time and monster.count < enemy_count): # 적 생성
-        monster.regeneration()
+    if abs((time.time()-x) >= REZEN_TIME and Enemy.count < BOSS_COUNT): # 적 생성(Enemy.count = 생성된 횟수, boss_count = boss 생성 조건 )
+        Enemy.regeneration()
         x = time.time()
-
-    for i in range(len(monster.spot))[::-1]:  # enemy 이동
+    
+    
+    for i in range(len(Enemy.spot))[::-1]:  # enemy 이동
         
-        if monster.spot[i][4] >= 210:
-            continue
+        if Enemy.spot[i][4] > 210:  # 하나라도 땅에 닿으면 실패
+            for k in range(4):
+                if Enemy.spot[i][k] != -3000:
+                        ending(0)
+
         for j in range(4):
-            image.paste(monster.image, (monster.spot[i][j],monster.spot[i][4]))
-        monster.spot[i] = [monster.spot[i][0],monster.spot[i][1],monster.spot[i][2],monster.spot[i][3],monster.spot[i][4] + 4]
+            image.paste(Enemy.image, (Enemy.spot[i][j],Enemy.spot[i][4]))
 
-        if monster.count >=1 and len(shot.shots) > 0:
-            shot.check(monster.spot) #[i]
-        
-        dragon.check_hp(monster.spot)
-        
-    if monster.count >= enemy_count: # 보스 생성
-        if monster.spot[enemy_count-1][4] >= 210:
-            image.paste(monster.image2, (monster.boss_spot[0][0],monster.boss_spot[0][1]),monster.image2)
-            life = monster.boss_life(shot.shots)
-            if life == 0:
-                ending()
-            dragon.check_hp_to_boss(monster.boss_spot)
-            monster.boss()
-            if monster.boss_spot[0][1] > 210:
-                ending()
+        Enemy.spot[i] = [Enemy.spot[i][0],Enemy.spot[i][1],Enemy.spot[i][2],Enemy.spot[i][3],Enemy.spot[i][4] + 4]
 
-    num = dragon.get_life()
-    if num == 3 :
-        image.paste(stage.life3,(0,180))
-    elif num == 2:
-        image.paste(stage.life2,(0,180))
-    elif num == 1:
-        image.paste(stage.life1,(0,180))
-    elif num == 0 :
-        ending()
+        if Enemy.count >=1 and len(Bullet.shots) > 0:   # enemy가 생성되었고, 총알이 발사 되었으면 검사
+            Bullet.check_kill_enemy(Enemy.spot) 
+        
+        filght.check_to_enemy(Enemy.spot)   # enemy와 filght가 닿았는지 검사
+
+    if Enemy.count >= BOSS_COUNT: # 보스 생성
+        if Enemy.spot[BOSS_COUNT - 1][4] >= 210: # 마지막으로 생성된 enemy그룹이 땅에 닿아 사라지면 보스 출현
+            
+            image.paste(Enemy.image2, (Enemy.boss_spot[0][0],Enemy.boss_spot[0][1]),Enemy.image2)
+            boss_life = Enemy.check_boss_life(Bullet.shots)
+
+            if boss_life == 0:
+                ending(1)
+                
+            filght.check_to_boss(Enemy.boss_spot)
+            Enemy.boss_move()
+
+            if Enemy.boss_spot[0][1] > 210:
+                ending(0)
+
+
+    filght_life = filght.get_life()
+
+    if filght_life == 3 :
+        image.paste(stage.life3,(0,200))
+
+    elif filght_life == 2:
+        image.paste(stage.life2,(0,200))
+
+    elif filght_life == 1:
+        image.paste(stage.life1,(0,200))
+
+    elif filght_life == 0 :
+        ending(0)
 
     disp.image(image)
-
-    #해야할 것 = 목숨 자꾸 이상하게 줄어드는데 오류 찾기, 처음부터 닿는게 아니라 뒤에서 닿으면 목숨 안줄어들음
-
-    # 비행 -> 배경이 움직이는 모션 -> gif 작동하는지 확인 -> 안된다면 일단은 코드부터 짜고, 고정(?)
-
-    # next stage
-
-    # 엔딩 : 적이 계속 나오다가, 어느 수준으로 나오면 보스가 나온다 -> 잡으면 끝.
-
-    # 보드 - 스틱(상하좌우 가운데), a버튼, b버튼(게임시작)
 
